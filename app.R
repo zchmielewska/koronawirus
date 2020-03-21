@@ -2,6 +2,7 @@ library(shiny)
 library(tidyverse)
 library(rio)
 library(rlang)
+source("utils/utility-functions.R")
 
 # Data --------------------------------------------------------------------
 
