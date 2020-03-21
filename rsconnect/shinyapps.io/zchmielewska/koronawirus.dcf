@@ -1,0 +1,12 @@
+name: koronawirus
+title: koronawirus
+username:
+account: zchmielewska
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 1973826
+bundleId: 2905012
+url: https://zchmielewska.shinyapps.io/koronawirus/
+when: 1584785249.00132
+asMultiple: FALSE
+asStatic: FALSE
