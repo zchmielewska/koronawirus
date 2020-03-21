@@ -9,9 +9,9 @@ source("utils/utility-functions.R")
 data.raw <- rio::import("https://www.ecdc.europa.eu/sites/default/files/documents/COVID-19-geographic-disbtribution-worldwide-2020-03-20.xlsx")
 data <- prepareData(data.raw)
 vars <- tribble(
-    ~ColumnName,  ~FullName,
-    "CasesTotal", "Całkowita liczba zakażeń",
-    "CasesDelta", "Przyrost liczby zakażeń",
+    ~ColumnName,   ~FullName,
+    "CasesTotal",  "Całkowita liczba zakażeń",
+    "CasesDelta",  "Przyrost liczby zakażeń",
     "DeathsTotal", "Całkowita liczba przypadków śmiertelnych", 
     "DeathsDelta", "Przyrost liczby przypadków śmiertelnych")
 
