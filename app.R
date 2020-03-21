@@ -30,10 +30,16 @@ ui <- fluidPage(
 
 server <- function(input, output, session) {
     output$plot <- renderPlot({
+        y <- input$var
+        breaks.y <- returnBreaks(max(data[y]))
+        
         ggplot(data, aes_string(x = "Date", y = input$var)) +
             geom_point() +
             scale_x_date(breaks = date_breaks("days")) +
-            theme(axis.text.x = element_text(angle=270))
+            theme(axis.text.x = element_text(angle=270)) +
+            scale_y_continuous(breaks = breaks.y, limits = c(0, max(breaks.y)))+
+            theme(panel.grid.minor = element_blank()) +
+            xlab("")
     })
 }
 

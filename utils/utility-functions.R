@@ -18,7 +18,8 @@ prepareData <- function(data.raw) {
     ) %>% 
     filter(Country == "Poland") %>% 
     arrange(Date) %>% 
-    mutate(Date = as.Date(Date)) %>% 
+    mutate(Date = as.Date(Date),
+           DeathsDelta = as.integer(DeathsDelta)) %>% 
     select(-c(Day, Month, Year, Country, GeoId))
   
   data.2 <- data.1 %>% 
@@ -27,4 +28,10 @@ prepareData <- function(data.raw) {
       DeathsTotal = deltaToTotal(data.1, "DeathsDelta")
     )
   return(data.2)
+}
+# returnBreaks(357)
+returnBreaks <- function(max) {
+  by <- max(round(max/9), 1)
+  result <- seq(0, max + by, by)  
+  return(result)
 }
