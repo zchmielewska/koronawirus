@@ -1,7 +1,7 @@
 library(shiny)
 library(tidyverse)
 library(rio)
-library(rlang)
+library(scales)
 source("utils/utility-functions.R")
 
 # Data --------------------------------------------------------------------
@@ -31,7 +31,9 @@ ui <- fluidPage(
 server <- function(input, output, session) {
     output$plot <- renderPlot({
         ggplot(data, aes_string(x = "Date", y = input$var)) +
-            geom_point()
+            geom_point() +
+            scale_x_date(breaks = date_breaks("days")) +
+            theme(axis.text.x = element_text(angle=270))
     })
 }
 
