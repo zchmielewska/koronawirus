@@ -92,8 +92,8 @@ prepareData <- function(data.raw) {
   
   # Change Italy's 1st epidemia day
   data.1 <- data.0
-  data.1[data.1$Date == as.Date("2020-01-31"), "CasesDelta"] <- 0
-  data.1[data.1$Date == as.Date("2020-02-21"), "CasesDelta"] <- 3
+  data.1[data.1$Date == as.Date("2020-01-31") & data.1$Country == "Italy", "CasesDelta"] <- 0
+  data.1[data.1$Date == as.Date("2020-02-21") & data.1$Country == "Italy", "CasesDelta"] <- 3
   
   # Add totals
   data.2 <- data.1 %>% 
