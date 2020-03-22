@@ -17,6 +17,12 @@ vars <- tribble(
     "DeathsTotal", "Całkowita liczba przypadków śmiertelnych", 
     "DeathsDelta", "Przyrost liczby przypadków śmiertelnych")
 
+x.axes <- tribble(
+    ~ColumnName,   ~FullName,
+    "EpidemiaDay", "Dzień epidemii",
+    "Date",        "Dzień kalendarzowy"
+)
+
 # Application -------------------------------------------------------------
 
 ui <- fluidPage(
@@ -25,9 +31,16 @@ ui <- fluidPage(
         sidebarPanel(
             selectInput(
                 inputId = "var",
-                label = "Wybierz zmienną:",
+                label = "Zmienna:",
                 choices = vars$FullName,
-                selected = "CasesTotal"
+                selected = "Całkowita liczba zakażeń"
+            ),
+            
+            selectInput(
+                inputId = "x.axis",
+                label = "Oś x:",
+                choices = x.axes$FullName,
+                selected = "Dzień epidemii"
             )
         ),
         mainPanel(
@@ -39,21 +52,37 @@ ui <- fluidPage(
 
 server <- function(input, output, session) {
     output$plot <- renderPlot({
-        y <- vars %>% 
-            filter(FullName == input$var) %>% 
+        # x.axis <- "Dzień epidemii"
+        # x.axis <- "Dzień kalendarzowy"
+        x.axis <- input$x.axis
+        x <- x.axes %>% 
+            filter(FullName == x.axis) %>% 
             select(ColumnName) %>% pull()
-        breaks.y <- returnBreaks(max(data[y]))
         
-        ggplot(data, aes_string(x = "EpidemiaDay", y = y, color = "Country")) +
+        # var <- "Całkowita liczba zakażeń"
+        var <- input$var
+        y <- vars %>% 
+            filter(FullName == var) %>% 
+            select(ColumnName) %>% pull()
+        
+        p1 <- ggplot(data, aes_string(x = x, y = y, color = "Country")) +
             geom_point() +
             geom_line() +
-            scale_x_continuous(breaks = seq(1, max(data$EpidemiaDay), by = 1)) +
-            # theme(axis.text.x = element_text(angle=270)) +
-            # scale_y_continuous(breaks = breaks.y, limits = c(0, max(breaks.y))) +
             theme(panel.grid.minor = element_blank()) +
-            ggtitle(input$var) +
-            xlab("Dzień epidemii") +
+            ggtitle(var) +
+            xlab(x.axis) +
             ylab("")
+        
+        if(x == "EpidemiaDay") {
+            p2 <- p1 +
+                scale_x_continuous(breaks = seq(1, max(pull(data[x])), by = 1))
+        } else if (x == "Date") {
+            p2 <- p1 +
+                scale_x_date(breaks = seq(min(pull(data[x])), max(pull(data[x])), by = 1)) +
+                theme(axis.text.x = element_text(angle=270))
+        }
+        
+        p2
     })
 }
 
