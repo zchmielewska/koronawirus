@@ -44,14 +44,14 @@ ui <- fluidPage(
             )
         ),
         mainPanel(
-           plotOutput("plot"),
+           plotly::plotlyOutput("plot"),
            p(paste("Dane ECDC opublikowane w dniu:", ecdc$date))
         )
     )
 )
 
 server <- function(input, output, session) {
-    output$plot <- renderPlot({
+    output$plot <- plotly::renderPlotly({
         # x.axis <- "Dzień epidemii"
         # x.axis <- "Dzień kalendarzowy"
         x.axis <- input$x.axis
