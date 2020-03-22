@@ -1,4 +1,3 @@
-
 # returnBreaks(357)
 returnBreaks <- function(max) {
   by <- max(round(max/9), 1)
@@ -108,4 +107,27 @@ prepareData <- function(data.raw) {
   data.5 <- addEpidemiaDay(data.4)
   
   return(data.5)
+}
+
+loadECDC <- function(last.known.date = "2020-03-21") {
+  ecdc <- list()
+  tryCatch(
+    {
+      ecdc$data.raw <- rio::import(paste0(url.base, Sys.Date(), ".xlsx"))  
+      ecdc$date     <- Sys.Date()
+    }, 
+    error = function(e) {
+      tryCatch(
+        {
+          ecdc$data.raw <- rio::import(paste0(url.base, Sys.Date()-1, ".xlsx"))  
+          ecdc$date     <- Sys.Date() - 1
+        },
+        error = function(er) {
+          ecdc$data.raw <- rio::import(paste0(url.base, last.known.date, ".xlsx"))  
+          ecdc$date     <- last.known.date
+        }
+      )
+    }
+  )
+  return(ecdc)
 }

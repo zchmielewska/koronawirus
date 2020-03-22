@@ -6,7 +6,8 @@ source("utils/utility-functions.R")
 
 # Data --------------------------------------------------------------------
 
-data.raw <- rio::import("https://www.ecdc.europa.eu/sites/default/files/documents/COVID-19-geographic-disbtribution-worldwide-2020-03-21.xlsx")
+ecdc     <- loadECDC()
+data.raw <- ecdc$data.raw
 data     <- prepareData(data.raw)
 
 vars <- tribble(
@@ -30,7 +31,8 @@ ui <- fluidPage(
             )
         ),
         mainPanel(
-           plotOutput("plot")
+           plotOutput("plot"),
+           p(paste("Dane ECDC opublikowane w dniu:", ecdc$date))
         )
     )
 )
