@@ -6,8 +6,9 @@ source("utils/utility-functions.R")
 
 # Data --------------------------------------------------------------------
 
-data.raw <- rio::import("https://www.ecdc.europa.eu/sites/default/files/documents/COVID-19-geographic-disbtribution-worldwide-2020-03-20.xlsx")
-data <- prepareData(data.raw)
+data.raw <- rio::import("https://www.ecdc.europa.eu/sites/default/files/documents/COVID-19-geographic-disbtribution-worldwide-2020-03-21.xlsx")
+data     <- prepareData(data.raw)
+
 vars <- tribble(
     ~ColumnName,   ~FullName,
     "CasesTotal",  "Całkowita liczba zakażeń",
@@ -18,7 +19,7 @@ vars <- tribble(
 # Application -------------------------------------------------------------
 
 ui <- fluidPage(
-    titlePanel("Koronawirus - dane z ECDC"),
+    titlePanel("Koronawirus dla Myszy"),
     sidebarLayout(
         sidebarPanel(
             selectInput(
@@ -41,14 +42,15 @@ server <- function(input, output, session) {
             select(ColumnName) %>% pull()
         breaks.y <- returnBreaks(max(data[y]))
         
-        ggplot(data, aes_string(x = "Date", y = y)) +
+        ggplot(data, aes_string(x = "EpidemiaDay", y = y, color = "Country")) +
             geom_point() +
-            scale_x_date(breaks = date_breaks("days")) +
-            theme(axis.text.x = element_text(angle=270)) +
-            scale_y_continuous(breaks = breaks.y, limits = c(0, max(breaks.y)))+
+            geom_line() +
+            scale_x_continuous(breaks = seq(1, max(data$EpidemiaDay), by = 1)) +
+            # theme(axis.text.x = element_text(angle=270)) +
+            # scale_y_continuous(breaks = breaks.y, limits = c(0, max(breaks.y))) +
             theme(panel.grid.minor = element_blank()) +
             ggtitle(input$var) +
-            xlab("") +
+            xlab("Dzień epidemii") +
             ylab("")
     })
 }
