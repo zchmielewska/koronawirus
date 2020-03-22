@@ -27,11 +27,14 @@ x.axes <- tribble(
 
 ui <- fluidPage(
     titlePanel("Koronawirus dla Myszy"),
+    
+    theme = shinythemes::shinytheme("lumen"),
+    
     sidebarLayout(
         sidebarPanel(
             selectInput(
                 inputId = "country",
-                label = "Wybierz kraj:",
+                label = "Kraj",
                 choices = unique(data$Country),
                 selected = c("Poland", "Italy"),
                 multiple = TRUE
@@ -39,7 +42,7 @@ ui <- fluidPage(
             
             selectInput(
                 inputId = "var",
-                label = "Zmienna:",
+                label = "Zmienna",
                 choices = vars$FullName,
                 selected = "Całkowita liczba zakażeń"
             ),
@@ -52,9 +55,19 @@ ui <- fluidPage(
             )
         ),
         mainPanel(
-            # textOutput("test"), 
-            plotly::plotlyOutput("plot"),
-            p(paste("Dane ECDC opublikowane w dniu:", ecdc$date))
+            tabsetPanel(
+                tabPanel("Wykres",
+                    # textOutput("test"), 
+                    plotly::plotlyOutput("plot"),
+                    p(paste("Dane ECDC opublikowane w dniu:", ecdc$date))    
+                ),
+                tabPanel("Dane",
+                    DT::DTOutput("table")
+                ),
+                tabPanel("Info",
+                    p("Dane pochodzące z ECDC.")         
+                )
+            )
         )
     )
 )
@@ -62,13 +75,16 @@ ui <- fluidPage(
 server <- function(input, output, session) {
     output$test <- renderText({input$country})
     
-    output$plot <- plotly::renderPlotly({
-        
+    getChosenData <- function() {
         country <- input$country
         if(is.null(country)) country <- "Poland"
-        plot.data <- filter(data, Country == country)
+        chosen.data <- filter(data, Country %in% country)
+        return(chosen.data)
+    }
+    
+    output$plot <- plotly::renderPlotly({
+        plot.data <- getChosenData()
         
-        # x.axis <- "Dzień epidemii"
         # x.axis <- "Dzień kalendarzowy"
         x.axis <- input$x.axis
         x <- x.axes %>% 
@@ -99,6 +115,10 @@ server <- function(input, output, session) {
         }
         
         p2
+    })
+    
+    output$table <- DT::renderDT({
+        DT::datatable(getChosenData())
     })
 }
 
