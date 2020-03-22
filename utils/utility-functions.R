@@ -110,6 +110,7 @@ prepareData <- function(data.raw) {
 }
 
 loadECDC <- function(last.known.date = "2020-03-21") {
+  url.base <- "https://www.ecdc.europa.eu/sites/default/files/documents/COVID-19-geographic-disbtribution-worldwide-"
   ecdc <- list()
   tryCatch(
     {
