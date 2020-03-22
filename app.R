@@ -30,6 +30,14 @@ ui <- fluidPage(
     sidebarLayout(
         sidebarPanel(
             selectInput(
+                inputId = "country",
+                label = "Wybierz kraj:",
+                choices = unique(data$Country),
+                selected = c("Poland", "Italy"),
+                multiple = TRUE
+            ),
+            
+            selectInput(
                 inputId = "var",
                 label = "Zmienna:",
                 choices = vars$FullName,
@@ -38,20 +46,28 @@ ui <- fluidPage(
             
             selectInput(
                 inputId = "x.axis",
-                label = "Oś x:",
+                label = "Przebieg czasu",
                 choices = x.axes$FullName,
                 selected = "Dzień epidemii"
             )
         ),
         mainPanel(
-           plotOutput("plot"),
-           p(paste("Dane ECDC opublikowane w dniu:", ecdc$date))
+            # textOutput("test"), 
+            plotly::plotlyOutput("plot"),
+            p(paste("Dane ECDC opublikowane w dniu:", ecdc$date))
         )
     )
 )
 
 server <- function(input, output, session) {
-    output$plot <- renderPlot({
+    output$test <- renderText({input$country})
+    
+    output$plot <- plotly::renderPlotly({
+        
+        country <- input$country
+        if(is.null(country)) country <- "Poland"
+        plot.data <- filter(data, Country == country)
+        
         # x.axis <- "Dzień epidemii"
         # x.axis <- "Dzień kalendarzowy"
         x.axis <- input$x.axis
@@ -65,7 +81,7 @@ server <- function(input, output, session) {
             filter(FullName == var) %>% 
             select(ColumnName) %>% pull()
         
-        p1 <- ggplot(data, aes_string(x = x, y = y, color = "Country")) +
+        p1 <- ggplot(plot.data, aes_string(x = x, y = y, color = "Country")) +
             geom_point() +
             geom_line() +
             theme(panel.grid.minor = element_blank()) +
@@ -74,7 +90,7 @@ server <- function(input, output, session) {
             ylab("")
         
         if(x == "EpidemiaDay") {
-            p2 <- p1 +
+            p2 <- p1  +
                 scale_x_continuous(breaks = seq(1, max(pull(data[x])), by = 1))
         } else if (x == "Date") {
             p2 <- p1 +
