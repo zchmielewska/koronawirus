@@ -112,20 +112,22 @@ prepareData <- function(data.raw) {
 loadECDC <- function(last.known.date = "2020-03-21") {
   url.base <- "https://www.ecdc.europa.eu/sites/default/files/documents/COVID-19-geographic-disbtribution-worldwide-"
   ecdc <- list()
+  today.exists <- FALSE
+  
   tryCatch(
     {
-      ecdc$data.raw <- rio::import(paste0(url.base, Sys.Date(), ".xlsx"))  
-      ecdc$date     <- Sys.Date()
+      ecdc$date     <- "2020-03-22"
+      ecdc$data.raw <- rio::import(paste0(url.base, "2020-03-22", ".xlsx"))  
     }, 
     error = function(e) {
       tryCatch(
         {
-          ecdc$data.raw <- rio::import(paste0(url.base, Sys.Date()-1, ".xlsx"))  
           ecdc$date     <- Sys.Date() - 1
+          ecdc$data.raw <- rio::import(paste0(url.base, Sys.Date()-1, ".xlsx"))  
         },
         error = function(er) {
-          ecdc$data.raw <- rio::import(paste0(url.base, last.known.date, ".xlsx"))  
           ecdc$date     <- last.known.date
+          ecdc$data.raw <- rio::import(paste0(url.base, last.known.date, ".xlsx"))  
         }
       )
     }
