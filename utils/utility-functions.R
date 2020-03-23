@@ -109,28 +109,33 @@ prepareData <- function(data.raw) {
   return(data.5)
 }
 
-loadECDC <- function(last.known.date = "2020-03-21") {
+loadECDC <- function(last.known.date = "2020-03-22") {
   url.base <- "https://www.ecdc.europa.eu/sites/default/files/documents/COVID-19-geographic-disbtribution-worldwide-"
   ecdc <- list()
-  today.exists <- FALSE
+  if.loaded <- FALSE
   
-  tryCatch(
-    {
-      ecdc$date     <- "2020-03-22"
-      ecdc$data.raw <- rio::import(paste0(url.base, "2020-03-22", ".xlsx"))  
-    }, 
-    error = function(e) {
-      tryCatch(
-        {
-          ecdc$date     <- Sys.Date() - 1
-          ecdc$data.raw <- rio::import(paste0(url.base, Sys.Date()-1, ".xlsx"))  
-        },
-        error = function(er) {
-          ecdc$date     <- last.known.date
-          ecdc$data.raw <- rio::import(paste0(url.base, last.known.date, ".xlsx"))  
-        }
-      )
-    }
-  )
+  # ECDC loads data some time during the day
+  if(!testit::has_error(rio::import(paste0(url.base, Sys.Date(), ".xlsx")))) {
+    ecdc$data.raw <- rio::import(paste0(url.base, Sys.Date(), ".xlsx"))  
+    ecdc$date     <- Sys.Date()
+    if.loaded     <- TRUE
+  }  
+  
+  if(!isTRUE(if.loaded)) {
+    if(!testit::has_error(rio::import(paste0(url.base, Sys.Date()-1, ".xlsx")))) {
+      ecdc$data.raw <- rio::import(paste0(url.base, Sys.Date()-1, ".xlsx"))  
+      ecdc$date     <- Sys.Date()-1
+      if.loaded     <- TRUE
+    } 
+  }
+  
+  if(!isTRUE(if.loaded)) {
+    if(!testit::has_error(rio::import(paste0(url.base, last.known.date, ".xlsx")))) {
+      ecdc$data.raw <- rio::import(paste0(url.base, last.known.date, ".xlsx"))  
+      ecdc$date     <- last.known.date
+    } 
+  }
+  
   return(ecdc)
 }
+loadECDC()

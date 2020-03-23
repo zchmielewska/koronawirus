@@ -65,7 +65,9 @@ ui <- fluidPage(
                     DT::DTOutput("table")
                 ),
                 tabPanel("Info",
-                    p("Dane pochodzące z ECDC.")         
+                    br(),
+                    p("Dane zasilające wykresy pochodzą ze strony ECDC (Europejskie Centrum ds. Zapobiegania i Kontroli Chorób)
+                      i są dostępne po adresem: https://www.ecdc.europa.eu/en")         
                 )
             )
         )
