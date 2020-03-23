@@ -26,23 +26,54 @@ x.axes <- tribble(
 
 # Application -------------------------------------------------------------
 
-ui <- dashboardPage(
-    dashboardHeader(title = "Koronawirus"),
-    dashboardSidebar(
-        sidebarMenu(
-            menuItem("Dashboard", tabName = "dashboard", icon = icon("dashboard")),
-            menuItem("Widgets", tabName = "widgets", icon = icon("th"))
-        )
-    ),
-    dashboardBody(
-        fluidRow(
-            box(plotOutput("plot", height = 250)),
-            box(
-                title = "Controls",
-                sliderInput("slider", "Number of observations:", 1, 100, 50)
-            )
+sidebar <- dashboardSidebar(
+    sidebarMenu(
+        menuItem("Polska", tabName = "Poland", icon = icon("dashboard"))
+    )
+)
+
+body <- dashboardBody(
+    tabItems(
+        tabItem(
+            tabName = "Poland",
+            fluidRow(
+                valueBox(20, "Dzień epidemii",   icon = icon("diagnoses")),
+                valueBox(19, "Ugotowane obiady", icon = icon("utensils")),
+                valueBox(44, "Spacery w lesie",  icon = icon("credit-card"))
+            ),
+            fluidRow(
+                box(width = 9, solidHeader = TRUE,
+                    plotly::plotlyOutput("plot")),
+                box(title = "Ustawienia", width = 3, status = "primary", solidHeader = TRUE,
+                    selectInput(
+                        inputId = "country",
+                        label = "Kraj",
+                        choices = unique(data$Country),
+                        selected = c("Poland", "Italy"),
+                        multiple = TRUE
+                    ),
+                    selectInput(
+                        inputId = "var",
+                        label = "Zmienna",
+                        choices = vars$FullName,
+                        selected = "Całkowita liczba zakażeń"
+                    ),
+                    selectInput(
+                        inputId = "x.axis",
+                        label = "Przebieg czasu",
+                        choices = x.axes$FullName,
+                        selected = "Dzień epidemii"
+                    )
+                )
+            )                    
         )
     )
+)
+
+ui <- dashboardPage(
+    dashboardHeader(title = "Koronawirus"),
+    sidebar,
+    body   
 )
 
 # ui <- fluidPage(
