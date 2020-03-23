@@ -2,6 +2,7 @@ library(shiny)
 library(tidyverse)
 library(rio)
 library(scales)
+library(shinydashboard)
 source("utils/utility-functions.R")
 
 # Data --------------------------------------------------------------------
@@ -25,52 +26,72 @@ x.axes <- tribble(
 
 # Application -------------------------------------------------------------
 
-ui <- fluidPage(
-    titlePanel("Koronawirus dla Myszy"),
-    
-    theme = shinythemes::shinytheme("lumen"),
-    
-    sidebarLayout(
-        sidebarPanel(
-            selectInput(
-                inputId = "country",
-                label = "Kraj",
-                choices = unique(data$Country),
-                selected = c("Poland", "Italy"),
-                multiple = TRUE
-            ),
-            
-            selectInput(
-                inputId = "var",
-                label = "Zmienna",
-                choices = vars$FullName,
-                selected = "Całkowita liczba zakażeń"
-            ),
-            
-            selectInput(
-                inputId = "x.axis",
-                label = "Przebieg czasu",
-                choices = x.axes$FullName,
-                selected = "Dzień epidemii"
-            )
-        ),
-        mainPanel(
-            tabsetPanel(
-                tabPanel("Wykres",
-                    # textOutput("test"), 
-                    plotly::plotlyOutput("plot"),
-                    p(paste("Dane ECDC opublikowane w dniu:", ecdc$date))    
-                ),
-                tabPanel("Dane",
-                    DT::DTOutput("table")
-                ),
-                tabPanel("Info",
-                    p("Dane pochodzące z ECDC.")         
-                )
+ui <- dashboardPage(
+    dashboardHeader(title = "Koronawirus"),
+    dashboardSidebar(
+        sidebarMenu(
+            menuItem("Dashboard", tabName = "dashboard", icon = icon("dashboard")),
+            menuItem("Widgets", tabName = "widgets", icon = icon("th"))
+        )
+    ),
+    dashboardBody(
+        fluidRow(
+            box(plotOutput("plot", height = 250)),
+            box(
+                title = "Controls",
+                sliderInput("slider", "Number of observations:", 1, 100, 50)
             )
         )
     )
 )
+
+# ui <- fluidPage(
+#     titlePanel("Koronawirus dla Myszy"),
+#     
+#     theme = shinythemes::shinytheme("lumen"),
+#     
+#     sidebarLayout(
+#         sidebarPanel(
+#             selectInput(
+#                 inputId = "country",
+#                 label = "Kraj",
+#                 choices = unique(data$Country),
+#                 selected = c("Poland", "Italy"),
+#                 multiple = TRUE
+#             ),
+#             
+#             selectInput(
+#                 inputId = "var",
+#                 label = "Zmienna",
+#                 choices = vars$FullName,
+#                 selected = "Całkowita liczba zakażeń"
+#             ),
+#             
+#             selectInput(
+#                 inputId = "x.axis",
+#                 label = "Przebieg czasu",
+#                 choices = x.axes$FullName,
+#                 selected = "Dzień epidemii"
+#             )
+#         ),
+#         mainPanel(
+#             tabsetPanel(
+#                 tabPanel("Wykres",
+#                          br(),     
+#                          p(paste("Dane z dnia:", ecdc$date)),
+#                          plotly::plotlyOutput("plot")
+#                 ),
+#                 tabPanel("Dane",
+#                          DT::DTOutput("table")
+#                 ),
+#                 tabPanel("Info",
+#                          br(),
+#                          p("Dane pochodzą z ECDC (European Centre for Disease Prevention and Control).")         
+#                 )
+#             )
+#         )
+#     )
+# )
 
 server <- function(input, output, session) {
     output$test <- renderText({input$country})
