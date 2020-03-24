@@ -138,3 +138,4 @@ loadECDC <- function(last.known.date = "2020-03-22") {
   
   return(ecdc)
 }
+loadECDC()
