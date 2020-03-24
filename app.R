@@ -2,6 +2,7 @@ library(shiny)
 library(tidyverse)
 library(rio)
 library(scales)
+library(shinydashboard)
 source("utils/utility-functions.R")
 
 # Data --------------------------------------------------------------------
@@ -25,57 +26,86 @@ x.axes <- tribble(
 
 # Application -------------------------------------------------------------
 
-ui <- fluidPage(
-    titlePanel("Koronawirus dla Myszy"),
-    
-    theme = shinythemes::shinytheme("lumen"),
-    
-    sidebarLayout(
-        sidebarPanel(
-            selectInput(
-                inputId = "country",
-                label = "Kraj",
-                choices = unique(data$Country),
-                selected = c("Poland", "Italy"),
-                multiple = TRUE
+sidebar <- dashboardSidebar(
+    sidebarMenu(
+        menuItem("Polska", tabName = "Poland", icon = icon("dashboard"))
+    )
+)
+
+body <- dashboardBody(
+    tabItems(
+        tabItem(
+            tabName = "Poland",
+            fluidRow(
+                valueBoxOutput("epidemiaDayBox"),
+                valueBoxOutput("casesBox"),
+                valueBoxOutput("deathsBox")
             ),
-            
-            selectInput(
-                inputId = "var",
-                label = "Zmienna",
-                choices = vars$FullName,
-                selected = "Całkowita liczba zakażeń"
-            ),
-            
-            selectInput(
-                inputId = "x.axis",
-                label = "Przebieg czasu",
-                choices = x.axes$FullName,
-                selected = "Dzień epidemii"
-            )
-        ),
-        mainPanel(
-            tabsetPanel(
-                tabPanel("Wykres",
-                    # textOutput("test"), 
+            fluidRow(
+                box(width = 9, solidHeader = TRUE,
                     plotly::plotlyOutput("plot"),
-                    p(paste("Dane ECDC opublikowane w dniu:", ecdc$date))    
-                ),
-                tabPanel("Dane",
-                    DT::DTOutput("table")
-                ),
-                tabPanel("Info",
-                    br(),
-                    p("Dane zasilające wykresy pochodzą ze strony ECDC (Europejskie Centrum ds. Zapobiegania i Kontroli Chorób)
-                      i są dostępne po adresem: https://www.ecdc.europa.eu/en")         
+                    p(paste("Dane z dnia:", ecdc$date))
+                    ),
+                box(title = "Ustawienia", width = 3, status = "primary", solidHeader = TRUE,
+                    selectInput(
+                        inputId = "country",
+                        label = "Kraj",
+                        choices = unique(data$Country),
+                        selected = c("Poland", "Italy"),
+                        multiple = TRUE
+                    ),
+                    selectInput(
+                        inputId = "var",
+                        label = "Zmienna",
+                        choices = vars$FullName,
+                        selected = "Całkowita liczba zakażeń"
+                    ),
+                    selectInput(
+                        inputId = "x.axis",
+                        label = "Przebieg czasu",
+                        choices = x.axes$FullName,
+                        selected = "Dzień epidemii"
+                    )
                 )
-            )
+            )                    
         )
     )
 )
 
+ui <- dashboardPage(
+    dashboardHeader(title = "Koronawirus"),
+    sidebar,
+    body   
+)
+
 server <- function(input, output, session) {
-    output$test <- renderText({input$country})
+    
+    output$epidemiaDayBox <- renderValueBox({
+        valueBox(
+            paste0(Sys.Date() - as.Date("2020-03-03")), "Dzień epidemii", icon = icon("first-aid"),
+            color = "purple"
+        )
+    })
+    
+    output$casesBox <- renderValueBox({
+        poland.today <- data %>% filter(Country == "Poland" & Date == ecdc$date)
+        total <- poland.today %>% select(CasesTotal) %>% pull()
+        delta <- poland.today %>% select(CasesDelta) %>% pull()
+        valueBox(
+            paste0(total, " (+", delta, ")"), "Zakażenia", icon = icon("diagnoses"),
+            color = "orange"
+        )
+    })
+    
+    output$deathsBox <- renderValueBox({
+        poland.today <- data %>% filter(Country == "Poland" & Date == ecdc$date)
+        total <- poland.today %>% select(DeathsTotal) %>% pull()
+        delta <- poland.today %>% select(DeathsDelta) %>% pull()
+        valueBox(
+            paste0(total, " (+", delta, ")"), "Zgony", icon = icon("times"),
+            color = "navy"
+        )
+    })
     
     getChosenData <- function() {
         country <- input$country
@@ -117,10 +147,6 @@ server <- function(input, output, session) {
         }
         
         p2
-    })
-    
-    output$table <- DT::renderDT({
-        DT::datatable(getChosenData())
     })
 }
 
