@@ -82,7 +82,7 @@ server <- function(input, output, session) {
     
     output$epidemiaDayBox <- renderValueBox({
         valueBox(
-            paste0(Sys.Date() - as.Date("2020-03-03")), "Dzień epidemii", icon = icon("first-aid"),
+            paste0(ecdc$date - as.Date("2020-03-03")), "Dzień epidemii", icon = icon("first-aid"),
             color = "purple"
         )
     })
