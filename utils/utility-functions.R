@@ -10,41 +10,6 @@ aggregate <- function(v) {
   return(result)
 }
 
-prepareData <- function(data.raw) {
-  
-  # Rename, order, filter only PL and IT
-  data.0 <- as_tibble(data.raw) %>% 
-    rename(
-      Date = DateRep,
-      Country = `Countries and territories`,
-      CasesDelta = Cases,
-      DeathsDelta = Deaths
-    ) %>% 
-    filter(Country == "Poland" | Country == "Italy") %>% 
-    arrange(Country, Date) %>% 
-    mutate(Date = as.Date(Date),
-           DeathsDelta = as.integer(DeathsDelta)) %>% 
-    select(-c(Day, Month, Year, GeoId))
-  
-  # Change Italy's 1st epidemia day
-  data.1 <- data.0
-  data.1[data.1$Date == as.Date("2020-01-31") & data.1$Country == "Italy", "CasesDelta"] <- 0
-  data.1[data.1$Date == as.Date("2020-02-21") & data.1$Country == "Italy", "CasesDelta"] <- 3
-  
-  # Add totals
-  data.2 <- data.1 %>% 
-    mutate(
-      CasesTotal  = deltaToTotal(data.1, ColumnDelta = "CasesDelta"),
-      DeathsTotal = deltaToTotal(data.1, ColumnDelta = "DeathsDelta")
-    )
-  
-  data.3 <- filter(data.2, CasesTotal != 0)
-  data.4 <- addMissingDates(data.3)
-  data.5 <- addEpidemiaDay(data.4)
-  
-  return(data.5)
-}
-
 loadECDC <- function(last.known.date = "2020-03-22") {
   url.base <- "https://www.ecdc.europa.eu/sites/default/files/documents/COVID-19-geographic-disbtribution-worldwide-"
   ecdc <- list()
@@ -75,7 +40,6 @@ loadECDC <- function(last.known.date = "2020-03-22") {
   return(ecdc)
 }
 
-# getPolandData(ecdc$data.raw)
 getPolandData <- function(data) {
   
   # filter and rename
