@@ -10,13 +10,15 @@ source("utils/utility-functions.R")
 ecdc     <- loadECDC()
 data.raw <- ecdc$data.raw
 data     <- prepareData(data.raw)
+poland.data <- getPolandData(ecdc$data.raw)
+
 
 vars <- tribble(
     ~ColumnName,   ~FullName,
     "CasesTotal",  "Całkowita liczba zakażeń",
     "CasesDelta",  "Przyrost liczby zakażeń",
-    "DeathsTotal", "Całkowita liczba przypadków śmiertelnych", 
-    "DeathsDelta", "Przyrost liczby przypadków śmiertelnych")
+    "DeathsTotal", "Całkowita liczba zgonów", 
+    "DeathsDelta", "Przyrost liczby zgonów")
 
 x.axes <- tribble(
     ~ColumnName,   ~FullName,
@@ -47,13 +49,6 @@ body <- dashboardBody(
                     p(paste("Dane z dnia:", ecdc$date))
                     ),
                 box(title = "Ustawienia", width = 3, status = "primary", solidHeader = TRUE,
-                    selectInput(
-                        inputId = "country",
-                        label = "Kraj",
-                        choices = unique(data$Country),
-                        selected = c("Poland", "Italy"),
-                        multiple = TRUE
-                    ),
                     selectInput(
                         inputId = "var",
                         label = "Zmienna",
@@ -88,9 +83,9 @@ server <- function(input, output, session) {
     })
     
     output$casesBox <- renderValueBox({
-        poland.today <- data %>% filter(Country == "Poland" & Date == ecdc$date)
-        total <- poland.today %>% select(CasesTotal) %>% pull()
-        delta <- poland.today %>% select(CasesDelta) %>% pull()
+        poland.today <- filter(poland.data, Date == ecdc$date)
+        total        <- poland.today %>% select(CasesTotal) %>% pull()
+        delta        <- poland.today %>% select(CasesDelta) %>% pull()
         valueBox(
             paste0(total, " (+", delta, ")"), "Zakażenia", icon = icon("diagnoses"),
             color = "orange"
@@ -98,38 +93,26 @@ server <- function(input, output, session) {
     })
     
     output$deathsBox <- renderValueBox({
-        poland.today <- data %>% filter(Country == "Poland" & Date == ecdc$date)
-        total <- poland.today %>% select(DeathsTotal) %>% pull()
-        delta <- poland.today %>% select(DeathsDelta) %>% pull()
+        poland.today <- filter(poland.data, Date == ecdc$date)
+        total        <- poland.today %>% select(DeathsTotal) %>% pull()
+        delta        <- poland.today %>% select(DeathsDelta) %>% pull()
         valueBox(
             paste0(total, " (+", delta, ")"), "Zgony", icon = icon("times"),
             color = "navy"
         )
     })
     
-    getChosenData <- function() {
-        country <- input$country
-        if(is.null(country)) country <- "Poland"
-        chosen.data <- filter(data, Country %in% country)
-        return(chosen.data)
-    }
-    
     output$plot <- plotly::renderPlotly({
-        plot.data <- getChosenData()
+        plot.data <- poland.data
         
         # x.axis <- "Dzień kalendarzowy"
         x.axis <- input$x.axis
-        x <- x.axes %>% 
-            filter(FullName == x.axis) %>% 
-            select(ColumnName) %>% pull()
-        
+        x <- x.axes %>% filter(FullName == x.axis) %>% select(ColumnName) %>% pull()
         # var <- "Całkowita liczba zakażeń"
         var <- input$var
-        y <- vars %>% 
-            filter(FullName == var) %>% 
-            select(ColumnName) %>% pull()
+        y <- vars %>% filter(FullName == var) %>% select(ColumnName) %>% pull()
         
-        p1 <- ggplot(plot.data, aes_string(x = x, y = y, color = "Country")) +
+        p1 <- ggplot(plot.data, aes_string(x = x, y = y)) +
             geom_point() +
             geom_line() +
             theme(panel.grid.minor = element_blank()) +

@@ -1,77 +1,13 @@
-# returnBreaks(357)
-returnBreaks <- function(max) {
-  by <- max(round(max/9), 1)
-  result <- seq(0, max + by, by)  
-  return(result)
-}
-
-# data <- data.frame(v = rep(1, 5), Country = c(rep("PL", 2), rep("IT", 3)))
-# deltaToTotal(data, "v")
-deltaToTotal <- function(data.1, ColumnDelta) {
-  n <- nrow(data.1)
-  result <- rep(NA, n)
-  
-  for(i in 1:n) {
+aggregate <- function(v) {
+  result <- c()
+  for(i in 1:length(v)) {
     if(i == 1) {
-      result[i] <- pull(data.1[i, ColumnDelta])
-    } else if (data.1$Country[i] != data.1$Country[i-1]) {
-      result[i] <- pull(data.1[i, ColumnDelta])
+      result[i] <- v[i] 
     } else {
-      result[i] <- result[[i-1]] + pull(data.1[i, ColumnDelta])
+      result[i] <- result[i-1] + v[i]
     }
   }
-  
-  result <- unlist(result)
   return(result)
-}
-
-# df <- data.frame(
-#   Country = c(rep("PL", 3), rep("IT", 2)),
-#   Date    = as.Date(c("2020-02-01", "2020-02-02", "2020-02-04", "2020-01-15", "2020-01-17")),
-#   Value   = c(1, 2, 4, 24, 27)
-# )
-# addMissingDates(df)
-addMissingDates <- function(data) {
-  output <- data.frame()
-  countries <- unique(data$Country)
-  
-  for(country in countries) {
-    date.min     <- data %>% filter(Country == country) %>% select(Date) %>% pull() %>% min()
-    date.max     <- data %>% filter(Country == country) %>% select(Date) %>% pull() %>% max()
-    date.period  <- seq(date.min, date.max, by = "1 day")
-    data.country <- filter(data, Country == country)
-    
-    for(i in 1:length(date.period)) {
-      d <- date.period[i]
-      n <- data.country %>% filter(Date == d) %>% nrow()
-      
-      # for no data, assume the same as previous day
-      if(n == 0) {
-        prev.data    <- data.country %>% filter(Date == d-1) %>% select(-c(Date))
-        prev.day     <- cbind(data.frame(Date = d), prev.data)
-        data.country <- rbind(data.country, prev.day)
-      }
-    }
-    output <- rbind(output, data.country)
-  }
-  output <- arrange(output, Country, Date)
-  return(output)
-}
-
-addEpidemiaDay <- function(data.4) {
-  output <- mutate(data.4, EpidemiaDay = NA)
-  for(i in 1:nrow(data.4)) {
-    if(i == 1) {
-      output$EpidemiaDay[i] <- 1
-    } else{
-      if(output$Country[i] == output$Country[i-1]) {
-        output$EpidemiaDay[i] <- output$EpidemiaDay[i-1] + 1
-      } else {
-        output$EpidemiaDay[i] <- 1
-      }
-    }
-  }  
-  return(output)
 }
 
 prepareData <- function(data.raw) {
@@ -138,4 +74,49 @@ loadECDC <- function(last.known.date = "2020-03-22") {
   
   return(ecdc)
 }
-loadECDC()
+
+# getPolandData(ecdc$data.raw)
+getPolandData <- function(data) {
+  
+  # filter and rename
+  result <- data %>% 
+    as_tibble() %>% 
+    rename(
+      Date = DateRep,
+      Country = `Countries and territories`,
+      CasesDelta = Cases,
+      DeathsDelta = Deaths) %>% 
+    filter(Country == "Poland")  %>% 
+    mutate(Date = as.Date(Date),
+           DeathsDelta = as.integer(DeathsDelta)) %>% 
+    select(-c(Day, Month, Year, Country, Pop_Data.2018, GeoId)) %>% 
+    arrange(Date) %>% 
+    mutate(
+      CasesTotal  = aggregate(CasesDelta),
+      DeathsTotal = aggregate(DeathsDelta)
+    )
+  
+  # add missing days
+  date.min     <- min(result$Date)
+  date.max     <- max(result$Date)
+  date.period  <- seq(date.min, date.max, by = "1 day")
+  
+  for(i in 1:length(date.period)) {
+    d <- date.period[i]
+    n <- result %>% filter(Date == d) %>% nrow()
+    
+    # for no data, assume the same as previous day
+    if(n == 0) {
+      prev.data <- result %>% filter(Date == d-1) %>% select(-c(Date))
+      prev.day  <- cbind(data.frame(Date = d), prev.data)
+      result     <- rbind(result, prev.day)
+    }
+  }
+  
+  # add epidemia day
+  result <- result %>% 
+    arrange(Date) %>% 
+    mutate(EpidemiaDay = 1:nrow(result))
+  
+  return(result)
+}
