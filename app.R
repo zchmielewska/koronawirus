@@ -1,3 +1,6 @@
+
+# Setup -------------------------------------------------------------------
+
 library(shiny)
 library(tidyverse)
 library(rio)
@@ -5,32 +8,35 @@ library(scales)
 library(shinydashboard)
 source("utils/utility-functions.R")
 
-# Data --------------------------------------------------------------------
+loadSettings <- function() {
+    settings <- list()
+    
+    settings$vars <- tribble(
+        ~ColumnName,   ~FullName,
+        "CasesTotal",  "Całkowita liczba zakażeń",
+        "CasesDelta",  "Przyrost liczby zakażeń",
+        "DeathsTotal", "Całkowita liczba zgonów", 
+        "DeathsDelta", "Przyrost liczby zgonów"
+    )
+    
+    settings$x.axes <- tribble(
+        ~ColumnName,   ~FullName,
+        "EpidemiaDay", "Dzień epidemii",
+        "Date",        "Dzień kalendarzowy"
+    )
+    
+    return(settings)
+}
 
-ecdc     <- loadECDC()
-data.raw <- ecdc$data.raw
-data     <- prepareData(data.raw)
+ecdc        <- loadECDC()
 poland.data <- getPolandData(ecdc$data.raw)
-
-
-vars <- tribble(
-    ~ColumnName,   ~FullName,
-    "CasesTotal",  "Całkowita liczba zakażeń",
-    "CasesDelta",  "Przyrost liczby zakażeń",
-    "DeathsTotal", "Całkowita liczba zgonów", 
-    "DeathsDelta", "Przyrost liczby zgonów")
-
-x.axes <- tribble(
-    ~ColumnName,   ~FullName,
-    "EpidemiaDay", "Dzień epidemii",
-    "Date",        "Dzień kalendarzowy"
-)
+settings    <- loadSettings()
 
 # Application -------------------------------------------------------------
 
 sidebar <- dashboardSidebar(
     sidebarMenu(
-        menuItem("Polska", tabName = "Poland", icon = icon("dashboard"))
+        menuItem("Polska", tabName = "Poland", icon = icon("flag"))
     )
 )
 
@@ -52,13 +58,13 @@ body <- dashboardBody(
                     selectInput(
                         inputId = "var",
                         label = "Zmienna",
-                        choices = vars$FullName,
+                        choices = settings$vars$FullName,
                         selected = "Całkowita liczba zakażeń"
                     ),
                     selectInput(
                         inputId = "x.axis",
                         label = "Przebieg czasu",
-                        choices = x.axes$FullName,
+                        choices = settings$x.axes$FullName,
                         selected = "Dzień epidemii"
                     )
                 )
@@ -103,16 +109,13 @@ server <- function(input, output, session) {
     })
     
     output$plot <- plotly::renderPlotly({
-        plot.data <- poland.data
         
-        # x.axis <- "Dzień kalendarzowy"
-        x.axis <- input$x.axis
-        x <- x.axes %>% filter(FullName == x.axis) %>% select(ColumnName) %>% pull()
-        # var <- "Całkowita liczba zakażeń"
-        var <- input$var
-        y <- vars %>% filter(FullName == var) %>% select(ColumnName) %>% pull()
+        x.axis <- input$x.axis # x.axis <- "Dzień epidemii"
+        x      <- settings$x.axes %>% filter(FullName == x.axis) %>% select(ColumnName) %>% pull()
+        var    <- input$var # var <- "Całkowita liczba zakażeń"
+        y      <- settings$vars %>% filter(FullName == var) %>% select(ColumnName) %>% pull()
         
-        p1 <- ggplot(plot.data, aes_string(x = x, y = y)) +
+        p1 <- ggplot(poland.data, aes_string(x = x, y = y)) +
             geom_point() +
             geom_line() +
             theme(panel.grid.minor = element_blank()) +
@@ -122,10 +125,10 @@ server <- function(input, output, session) {
         
         if(x == "EpidemiaDay") {
             p2 <- p1  +
-                scale_x_continuous(breaks = seq(1, max(pull(data[x])), by = 1))
+                scale_x_continuous(breaks = seq(1, max(poland.data$EpidemiaDay), by = 1))
         } else if (x == "Date") {
             p2 <- p1 +
-                scale_x_date(breaks = seq(min(pull(data[x])), max(pull(data[x])), by = 1)) +
+                scale_x_date(breaks = seq(min(poland.data$Date), max(poland.data$Date), by = 1)) +
                 theme(axis.text.x = element_text(angle=270))
         }
         
