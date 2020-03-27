@@ -29,21 +29,22 @@ loadSettings <- function() {
 }
 
 ecdc        <- loadECDC()
-poland.data <- getPolandData(ecdc$data.raw)
+poland.data <- getPolandData(ecdc$data)
 settings    <- loadSettings()
 
 # Application -------------------------------------------------------------
 
 sidebar <- dashboardSidebar(
     sidebarMenu(
-        menuItem("Polska", tabName = "Poland", icon = icon("flag"))
+        menuItem("Polska", tabName = "poland", icon = icon("flag")),
+        menuItem("Świat",  tabName = "world",  icon = icon("globe"))
     )
 )
 
 body <- dashboardBody(
     tabItems(
         tabItem(
-            tabName = "Poland",
+            tabName = "poland",
             fluidRow(
                 valueBoxOutput("epidemiaDayBox"),
                 valueBoxOutput("casesBox"),
@@ -51,7 +52,7 @@ body <- dashboardBody(
             ),
             fluidRow(
                 box(width = 9, solidHeader = TRUE,
-                    plotly::plotlyOutput("plot"),
+                    plotly::plotlyOutput("polandPlot"),
                     p(paste("Dane z dnia:", ecdc$date))
                     ),
                 box(title = "Ustawienia", width = 3, status = "primary", solidHeader = TRUE,
@@ -69,6 +70,23 @@ body <- dashboardBody(
                     )
                 )
             )                    
+        ),
+        tabItem(
+            tabName = "world",
+            fluidRow(
+                box(width = 9,
+                    plotly::plotlyOutput("worldPlot")
+                ),
+                box(width = 3,
+                    selectInput(
+                     inputId = "worldCountry",
+                     label = "Wybierz kraj:",
+                     choices = unique(ecdc$data$Country),
+                     selected = "Poland",
+                     multiple = TRUE
+                    )
+                )
+            )
         )
     )
 )
@@ -108,8 +126,7 @@ server <- function(input, output, session) {
         )
     })
     
-    output$plot <- plotly::renderPlotly({
-        
+    output$polandPlot <- plotly::renderPlotly({
         x.axis <- input$x.axis # x.axis <- "Dzień epidemii"
         x      <- settings$x.axes %>% filter(FullName == x.axis) %>% select(ColumnName) %>% pull()
         var    <- input$var # var <- "Całkowita liczba zakażeń"
@@ -134,6 +151,16 @@ server <- function(input, output, session) {
         
         p2
     })
+    
+    output$worldPlot <- plotly::renderPlotly({
+        world.plot.data <- ecdc$data %>% filter(Country %in% input$worldCountry)
+        
+        ggplot(world.plot.data, aes_string(x = "Date", y = "CasesDelta", color = "Country")) +
+            geom_point() +
+            geom_line() +
+            ggtitle("Przyrost liczby zakażeń")
+    })
+    
 }
 
 shinyApp(ui = ui, server = server)
