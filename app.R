@@ -11,7 +11,7 @@ source("utils/utility-functions.R")
 loadSettings <- function() {
     settings <- list()
     
-    settings$vars <- tribble(
+    settings$y.vars <- tribble(
         ~ColumnName,   ~FullName,
         "CasesTotal",  "Całkowita liczba zakażeń",
         "CasesDelta",  "Przyrost liczby zakażeń",
@@ -19,7 +19,7 @@ loadSettings <- function() {
         "DeathsDelta", "Przyrost liczby zgonów"
     )
     
-    settings$x.axes <- tribble(
+    settings$x.vars <- tribble(
         ~ColumnName,   ~FullName,
         "EpidemiaDay", "Dzień epidemii",
         "Date",        "Dzień kalendarzowy"
@@ -28,9 +28,11 @@ loadSettings <- function() {
     return(settings)
 }
 
+settings    <- loadSettings()
 ecdc        <- loadECDC()
 poland.data <- getPolandData(ecdc$data)
-settings    <- loadSettings()
+world.data  <- getWorldData(ecdc$data)
+
 
 # Application -------------------------------------------------------------
 
@@ -57,15 +59,13 @@ body <- dashboardBody(
                     ),
                 box(title = "Ustawienia", width = 3, status = "primary", solidHeader = TRUE,
                     selectInput(
-                        inputId = "var",
-                        label = "Zmienna",
-                        choices = settings$vars$FullName,
+                        inputId = "polandYVar",
+                        label = "Zmienna", choices = settings$y.vars$FullName,
                         selected = "Całkowita liczba zakażeń"
                     ),
                     selectInput(
-                        inputId = "x.axis",
-                        label = "Przebieg czasu",
-                        choices = settings$x.axes$FullName,
+                        inputId = "polandXVar",
+                        label = "Przebieg czasu", choices = settings$x.vars$FullName,
                         selected = "Dzień epidemii"
                     )
                 )
@@ -80,10 +80,13 @@ body <- dashboardBody(
                 box(width = 3,
                     selectInput(
                      inputId = "worldCountry",
-                     label = "Wybierz kraj:",
-                     choices = unique(ecdc$data$Country),
-                     selected = "Poland",
-                     multiple = TRUE
+                     label = "Wybierz kraj", choices = unique(world.data$Country),
+                     selected = c("China", "United_States_of_America"), multiple = TRUE
+                    ),
+                    selectInput(
+                        inputId = "worldYVar",
+                        label = "Zmienna", choices = settings$y.vars$FullName,
+                        selected = "Całkowita liczba zakażeń"
                     )
                 )
             )
@@ -91,14 +94,8 @@ body <- dashboardBody(
     )
 )
 
-ui <- dashboardPage(
-    dashboardHeader(title = "Koronawirus"),
-    sidebar,
-    body   
-)
 
 server <- function(input, output, session) {
-    
     output$epidemiaDayBox <- renderValueBox({
         valueBox(
             paste0(ecdc$date - as.Date("2020-03-03")), "Dzień epidemii", icon = icon("first-aid"),
@@ -127,21 +124,21 @@ server <- function(input, output, session) {
     })
     
     output$polandPlot <- plotly::renderPlotly({
-        x.axis <- input$x.axis # x.axis <- "Dzień epidemii"
-        x      <- settings$x.axes %>% filter(FullName == x.axis) %>% select(ColumnName) %>% pull()
-        var    <- input$var # var <- "Całkowita liczba zakażeń"
-        y      <- settings$vars %>% filter(FullName == var) %>% select(ColumnName) %>% pull()
+        x.var <- input$polandXVar # x.var <- "Dzień epidemii"
+        x     <- settings$x.vars %>% filter(FullName == x.var) %>% select(ColumnName) %>% pull()
+        y.var <- input$polandYVar # y.var <- "Całkowita liczba zakażeń"
+        y     <- settings$y.vars %>% filter(FullName == y.var) %>% select(ColumnName) %>% pull()
         
         p1 <- ggplot(poland.data, aes_string(x = x, y = y)) +
             geom_point() +
             geom_line() +
             theme(panel.grid.minor = element_blank()) +
-            ggtitle(var) +
-            xlab(x.axis) +
+            ggtitle(y.var) +
+            xlab(x.var) +
             ylab("")
         
         if(x == "EpidemiaDay") {
-            p2 <- p1  +
+            p2 <- p1 + 
                 scale_x_continuous(breaks = seq(1, max(poland.data$EpidemiaDay), by = 1))
         } else if (x == "Date") {
             p2 <- p1 +
@@ -153,14 +150,26 @@ server <- function(input, output, session) {
     })
     
     output$worldPlot <- plotly::renderPlotly({
-        world.plot.data <- ecdc$data %>% filter(Country %in% input$worldCountry)
+        y.var <- input$worldYVar # y.var <- "Całkowita liczba zakażeń"
+        y     <- settings$y.vars %>% filter(FullName == y.var) %>% select(ColumnName) %>% pull()
         
-        ggplot(world.plot.data, aes_string(x = "Date", y = "CasesDelta", color = "Country")) +
+        # world.data.plot <- filter(world.data, Country %in% "Poland")
+        world.data.plot <- filter(world.data, Country %in% input$worldCountry)
+        
+        ggplot(world.data.plot, aes_string(x = "Date", y = y, color = "Country")) +
             geom_point() +
             geom_line() +
-            ggtitle("Przyrost liczby zakażeń")
+            ggtitle(y.var) +
+            xlab("") +
+            ylab("")
     })
     
 }
+
+ui <- dashboardPage(
+    dashboardHeader(title = "Koronawirus"),
+    sidebar,
+    body   
+)
 
 shinyApp(ui = ui, server = server)

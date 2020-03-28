@@ -87,3 +87,16 @@ getPolandData <- function(data) {
   
   return(result)
 }
+
+getWorldData <- function(data) {
+  result <- data %>% 
+    select(Date, CasesDelta, DeathsDelta, Country, popData2018) %>% 
+    group_by(Country) %>% 
+    arrange(Country, Date) %>% 
+    mutate(
+      CasesTotal = aggregate(CasesDelta),
+      DeathsTotal = aggregate(DeathsDelta),
+    ) %>% 
+    ungroup()
+  return(result)
+}
