@@ -41,10 +41,10 @@ loadECDC <- function(last.known.date = "2020-03-22") {
   ecdc$data <- ecdc$data %>% 
     as_tibble() %>% 
     rename(
-      Date = DateRep,
-      Country = `Countries and territories`,
-      CasesDelta = Cases,
-      DeathsDelta = Deaths) %>% 
+      Date = dateRep,
+      Country = `countriesAndTerritories`,
+      CasesDelta = cases,
+      DeathsDelta = deaths) %>% 
     mutate(Date = as.Date(Date),
            DeathsDelta = as.integer(DeathsDelta))
   
@@ -56,7 +56,7 @@ getPolandData <- function(data) {
   # filter and rename
   result <- data %>% 
     filter(Country == "Poland")  %>% 
-    select(-c(Day, Month, Year, Country, Pop_Data.2018, GeoId)) %>% 
+    select(-c(day, month, year, Country, popData2018, geoId)) %>% 
     arrange(Date) %>% 
     mutate(
       CasesTotal  = aggregate(CasesDelta),
