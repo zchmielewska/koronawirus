@@ -10,7 +10,7 @@ aggregate <- function(v) {
   return(result)
 }
 
-loadECDC <- function(last.known.date = "2020-03-22") {
+loadECDC <- function(last.known.date = "2020-03-28") {
   url.base <- "https://www.ecdc.europa.eu/sites/default/files/documents/COVID-19-geographic-disbtribution-worldwide-"
   ecdc <- list()
   if.loaded <- FALSE
@@ -22,7 +22,7 @@ loadECDC <- function(last.known.date = "2020-03-22") {
     if.loaded <- TRUE
   }  
   
-  if(!isTRUE(if.loaded)) {
+  if(!if.loaded) {
     if(!testit::has_error(rio::import(paste0(url.base, Sys.Date()-1, ".xlsx")))) {
       ecdc$data <- rio::import(paste0(url.base, Sys.Date()-1, ".xlsx"))  
       ecdc$date <- Sys.Date()-1
@@ -30,10 +30,20 @@ loadECDC <- function(last.known.date = "2020-03-22") {
     } 
   }
   
-  if(!isTRUE(if.loaded)) {
+  # ECDC sometimes changes the column names which crashes the app
+  if(if.loaded) {
+    if.columns.ok <- all(colnames(ecdc$data) %in% c("dateRep", "day", "month", 
+                                                    "year", "cases", "deaths", 
+                                                    "countriesAndTerritories", 
+                                                    "geoId", "countryterritoryCode", 
+                                                    "popData2018"))
+  }
+  
+  # For safety, use the data from the last known day
+  if(!(if.loaded & if.columns.ok)) {
     if(!testit::has_error(rio::import(paste0(url.base, last.known.date, ".xlsx")))) {
       ecdc$data <- rio::import(paste0(url.base, last.known.date, ".xlsx"))  
-      ecdc$date <- last.known.date
+      ecdc$date <- as.Date(last.known.date)
     } 
   }
   

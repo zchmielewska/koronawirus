@@ -13,10 +13,10 @@ loadSettings <- function() {
     
     settings$y.vars <- tribble(
         ~ColumnName,   ~FullName,
-        "CasesTotal",  "Całkowita liczba zakażeń",
-        "CasesDelta",  "Przyrost liczby zakażeń",
-        "DeathsTotal", "Całkowita liczba zgonów", 
-        "DeathsDelta", "Przyrost liczby zgonów"
+        "CasesTotal",  "Zakażenia",
+        "CasesDelta",  "Przyrost zakażeń",
+        "DeathsTotal", "Zgony", 
+        "DeathsDelta", "Przyrost zgonów"
     )
     
     settings$x.vars <- tribble(
@@ -33,17 +33,25 @@ ecdc        <- loadECDC()
 poland.data <- getPolandData(ecdc$data)
 world.data  <- getWorldData(ecdc$data)
 
-
 # Application -------------------------------------------------------------
 
 sidebar <- dashboardSidebar(
     sidebarMenu(
         menuItem("Polska", tabName = "poland", icon = icon("flag")),
-        menuItem("Świat",  tabName = "world",  icon = icon("globe"))
+        menuItem("Świat",  tabName = "world",  icon = icon("globe")),
+        menuItem("Dziś",   tabName = "today",  icon = icon("calendar")),
+        menuItem("Info",   tabName = "info",   icon = icon("info")),
+        br(),
+        p(paste("Dane z dnia:", ecdc$date), 
+          align = "left", 
+          style="margin-left: 1.5em; font-size:80%;")
     )
 )
 
 body <- dashboardBody(
+    tags$head(
+        tags$link(rel = "stylesheet", type = "text/css", href = "custom.css")
+    ),
     tabItems(
         tabItem(
             tabName = "poland",
@@ -54,8 +62,7 @@ body <- dashboardBody(
             ),
             fluidRow(
                 box(width = 9, solidHeader = TRUE,
-                    plotly::plotlyOutput("polandPlot"),
-                    p(paste("Dane z dnia:", ecdc$date))
+                    plotly::plotlyOutput("polandPlot")
                     ),
                 box(title = "Ustawienia", width = 3, status = "primary", solidHeader = TRUE,
                     selectInput(
@@ -90,10 +97,45 @@ body <- dashboardBody(
                     )
                 )
             )
+        ),
+        tabItem(
+            tabName = "today",
+            fluidRow(
+                box(width = 9,
+                     DT::DTOutput("todayTable")
+                )
+            )
+        ),
+        tabItem(
+            tabName = "info",
+            fluidRow(
+                box(title = "Źródło", width = 6, 
+                    status = "primary", solidHeader = TRUE,
+                    p("Dane zasilające wykresy i tabelę pochodzą ze strony
+                      ECDC (European Centre for Disease Prevention and Control).",
+                      style="text-align: justify;"),
+                    p("Są one publicznie dostępne na stronie:",
+                      tags$a(href = "https://www.ecdc.europa.eu/en", "www.ecdc.europa.eu")),
+                    p("Warto pamiętać, że liczba zakażeń to jedynie liczba potwierdzonych przypadków.
+                      Dane ECDC nie zawierają informacji na temat liczby przeprowadzonych testów 
+                      w danym kraju. Im więcej przeprowadzanych testów, tym więcej zidentyfikowanych
+                      zakażeń, nawet w przypadkach lekkich objawów choroby. Ma to zatem wpływ na 
+                      statystkę śmiertelność, która została wyznaczona jako liczba zgonów
+                      do liczby potwierdzonych zakażeń. Faktyczna śmiertelność jest zatem niższa,
+                      ponieważ wiele osób przechodzi chorobę bezobjawowo lub nie zgłosiło się
+                      faktu zachorowania.", 
+                      style="text-align: justify;")
+                ),
+                box(width = 3,
+                    status = "primary", solidHeader = TRUE,
+                    p("W przypadku jakichkolwiek problemów, proszę zgłoś",
+                      tags$a(href = "https://github.com/zchmielewska/koronawirus/issues", "tutaj"),
+                      "swoje uwagi.")
+                    )
+                )
+            )
         )
-    )
 )
-
 
 server <- function(input, output, session) {
     output$epidemiaDayBox <- renderValueBox({
@@ -153,17 +195,41 @@ server <- function(input, output, session) {
         y.var <- input$worldYVar # y.var <- "Całkowita liczba zakażeń"
         y     <- settings$y.vars %>% filter(FullName == y.var) %>% select(ColumnName) %>% pull()
         
-        # world.data.plot <- filter(world.data, Country %in% "Poland")
-        world.data.plot <- filter(world.data, Country %in% input$worldCountry)
-        
-        ggplot(world.data.plot, aes_string(x = "Date", y = y, color = "Country")) +
-            geom_point() +
-            geom_line() +
-            ggtitle(y.var) +
-            xlab("") +
-            ylab("")
+        if(length(input$worldCountry)) {
+            world.data.plot <- filter(world.data, Country %in% input$worldCountry)
+            
+            ggplot(world.data.plot, aes_string(x = "Date", y = y, color = "Country")) +
+                geom_point() +
+                geom_line() +
+                ggtitle(y.var) +
+                xlab("") +
+                ylab("")    
+        } else {
+            ggplot() +
+                ggtitle(y.var)
+        }
     })
     
+    getWorldDataTable <- function() {
+        world.data %>% 
+            filter(Date == ecdc$date) %>% 
+            filter(complete.cases(.)) %>% 
+            arrange(desc(CasesTotal)) %>% 
+            mutate(CasesInPop = round(CasesTotal/popData2018 * 100, 2),
+                   Mortality  = round(DeathsTotal/CasesTotal * 100, 2)) %>% 
+            select(Country, CasesTotal, DeathsTotal, popData2018, CasesInPop, Mortality) %>% 
+            rename(`Kraj / terytorium` = Country,
+                   Zakażenia = CasesTotal,
+                   Zgony = DeathsTotal,
+                   Populacja = popData2018,
+                   `Zakażenia w populacji (%)` = CasesInPop,
+                   `Śmiertelność (%)` = Mortality)
+    }
+    
+    output$todayTable <- DT::renderDT(
+        getWorldDataTable(), rownames = FALSE,
+        options = list(lengthMenu = c(10, 50, 100))
+    )
 }
 
 ui <- dashboardPage(
