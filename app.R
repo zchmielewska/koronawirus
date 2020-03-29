@@ -4,8 +4,8 @@
 library(shiny)
 library(tidyverse)
 library(rio)
-library(scales)
 library(shinydashboard)
+library(DT)
 source("utils/utility-functions.R")
 
 loadSettings <- function() {
@@ -102,7 +102,7 @@ body <- dashboardBody(
             tabName = "today",
             fluidRow(
                 box(width = 9,
-                     DT::DTOutput("todayTable")
+                     DTOutput("todayTable")
                 )
             )
         ),
@@ -215,20 +215,22 @@ server <- function(input, output, session) {
             filter(Date == ecdc$date) %>% 
             filter(complete.cases(.)) %>% 
             arrange(desc(CasesTotal)) %>% 
-            mutate(CasesInPop = round(CasesTotal/popData2018 * 100, 2),
-                   Mortality  = round(DeathsTotal/CasesTotal * 100, 2)) %>% 
+            mutate(CasesInPop = CasesTotal/popData2018,
+                   Mortality  = DeathsTotal/CasesTotal) %>% 
             select(Country, CasesTotal, DeathsTotal, popData2018, CasesInPop, Mortality) %>% 
             rename(`Kraj / terytorium` = Country,
                    Zakażenia = CasesTotal,
                    Zgony = DeathsTotal,
                    Populacja = popData2018,
-                   `Zakażenia w populacji (%)` = CasesInPop,
-                   `Śmiertelność (%)` = Mortality)
+                   `Zakażenia w populacji` = CasesInPop,
+                   `Śmiertelność` = Mortality)
     }
     
-    output$todayTable <- DT::renderDT(
-        getWorldDataTable(), rownames = FALSE,
-        options = list(lengthMenu = c(10, 50, 100))
+    output$todayTable <- renderDT(
+        datatable(getWorldDataTable(), 
+        rownames = FALSE,
+        options = list(lengthMenu = c(10, 50, 100))) %>% 
+            formatPercentage(columns = c(5, 6), digits = 2)
     )
 }
 

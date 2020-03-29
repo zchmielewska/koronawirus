@@ -40,7 +40,7 @@ loadECDC <- function(last.known.date = "2020-03-28") {
   }
   
   # For safety, use the data from the last known day
-  if(!(if.loaded & if.columns.ok)) {
+  if(!if.loaded | !isTRUE(if.columns.ok)) {
     if(!testit::has_error(rio::import(paste0(url.base, last.known.date, ".xlsx")))) {
       ecdc$data <- rio::import(paste0(url.base, last.known.date, ".xlsx"))  
       ecdc$date <- as.Date(last.known.date)
