@@ -5,8 +5,8 @@ account: zchmielewska
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 1973826
-bundleId: 2938947
+bundleId: 2939127
 url: https://zchmielewska.shinyapps.io/koronawirus/
-when: 1585476432.26199
+when: 1585481451.15091
 asMultiple: FALSE
 asStatic: FALSE
