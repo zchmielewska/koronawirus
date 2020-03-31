@@ -6,6 +6,7 @@ library(ggplot2)
 library(dplyr)
 library(shinydashboard)
 library(DT)
+library(shinyjs)
 
 source("utils/utility-functions.R")
 
@@ -34,6 +35,7 @@ ecdc        <- loadECDC()
 poland.data <- getPolandData(ecdc$data)
 world.data  <- getWorldData(ecdc$data)
 
+
 # Application -------------------------------------------------------------
 
 sidebar <- dashboardSidebar(
@@ -50,12 +52,18 @@ sidebar <- dashboardSidebar(
 )
 
 body <- dashboardBody(
+    useShinyjs(),
     tags$head(
         tags$link(rel = "stylesheet", type = "text/css", href = "custom.css")
     ),
     tabItems(
         tabItem(
             tabName = "poland",
+            div(id = "waiting", fluidRow(
+                box("Wczytuję dane...")
+            )),
+            
+            hidden(div(id = "polandElements",
             fluidRow(
                 valueBoxOutput("epidemiaDayBox"),
                 valueBoxOutput("casesBox"),
@@ -77,7 +85,8 @@ body <- dashboardBody(
                         selected = "Dzień epidemii"
                     )
                 )
-            )                    
+            )    
+            ))
         ),
         tabItem(
             tabName = "world",
@@ -139,6 +148,7 @@ body <- dashboardBody(
 )
 
 server <- function(input, output, session) {
+    
     output$epidemiaDayBox <- renderValueBox({
         valueBox(
             paste0(ecdc$date - as.Date("2020-03-03")), "Dzień epidemii", icon = icon("first-aid"),
@@ -211,6 +221,7 @@ server <- function(input, output, session) {
         }
     })
     
+    # This function is here because otherwise R has problems with Polish letters
     getWorldDataTable <- function() {
         world.data %>% 
             filter(Date == ecdc$date) %>% 
@@ -234,6 +245,8 @@ server <- function(input, output, session) {
         options = list(lengthMenu = c(10, 50, 100))) %>% 
             formatPercentage(columns = c(5, 6), digits = 2)
     )
+    
+    showElements()
 }
 
 ui <- dashboardPage(
