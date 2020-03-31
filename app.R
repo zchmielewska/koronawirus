@@ -6,7 +6,6 @@ library(ggplot2)
 library(dplyr)
 library(shinydashboard)
 library(DT)
-library(shinyjs)
 
 source("utils/utility-functions.R")
 
@@ -52,18 +51,12 @@ sidebar <- dashboardSidebar(
 )
 
 body <- dashboardBody(
-    useShinyjs(),
     tags$head(
         tags$link(rel = "stylesheet", type = "text/css", href = "custom.css")
     ),
     tabItems(
         tabItem(
             tabName = "poland",
-            div(id = "waiting", fluidRow(
-                box("Wczytuję dane...")
-            )),
-            
-            hidden(div(id = "polandElements",
             fluidRow(
                 valueBoxOutput("epidemiaDayBox"),
                 valueBoxOutput("casesBox"),
@@ -86,7 +79,6 @@ body <- dashboardBody(
                     )
                 )
             )    
-            ))
         ),
         tabItem(
             tabName = "world",
@@ -246,7 +238,6 @@ server <- function(input, output, session) {
             formatPercentage(columns = c(5, 6), digits = 2)
     )
     
-    showElements()
 }
 
 ui <- dashboardPage(

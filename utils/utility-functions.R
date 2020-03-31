@@ -10,7 +10,6 @@ aggregate <- function(v) {
   return(result)
 }
 
-# Loads data from ECDC and renames columns
 loadECDC <- function() {
   ecdc <- list()
   data.raw <- read.csv("https://opendata.ecdc.europa.eu/covid19/casedistribution/csv", stringsAsFactors = FALSE)
@@ -78,10 +77,4 @@ getWorldData <- function(data) {
     ) %>% 
     ungroup()
   return(result)
-}
-
-showElements <- function() {
-  Sys.sleep(10)
-  hide("waiting")
-  show("polandElements")   
 }
