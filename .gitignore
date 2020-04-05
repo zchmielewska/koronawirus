@@ -2,4 +2,5 @@
 .Rhistory
 .RData
 .Ruserdata
-personal-notes.txt
+droptoken.rds
+.httr-oauth
