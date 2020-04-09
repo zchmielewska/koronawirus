@@ -257,13 +257,12 @@ server <- function(input, output, session) {
             geom_line() +
             theme(panel.grid.minor = element_blank()) +
             ggtitle(y.var) +
-            xlab(x.var) +
-            ylab("")
+            xlab(x.var)
         
         if(input$polandLogScale) {
-            p2 <- p1 + scale_y_continuous(trans='log10')
+            p2 <- p1 + scale_y_continuous(name = "", labels = scales::comma_format(accuracy = 1, big.mark = " "), trans='log10')
         } else {
-            p2 <- p1
+            p2 <- p1 + scale_y_continuous(name = "", labels = scales::comma_format(accuracy = 1, big.mark = " "))
         }
         
         p2
@@ -286,16 +285,15 @@ server <- function(input, output, session) {
                 geom_point() +
                 geom_line() +
                 ggtitle(y.var) +
-                xlab("") +
-                ylab("")    
+                xlab(NULL)
         } else {
             p1 <- ggplot() + ggtitle(y.var)
         }
         
         if(input$worldLogScale) {
-            p2 <- p1 + scale_y_continuous(trans='log10')
+            p2 <- p1 + scale_y_continuous(name = "", labels = scales::comma_format(accuracy = 1,  big.mark = " "), trans='log10')
         } else {
-            p2 <- p1
+            p2 <- p1 + scale_y_continuous(name = "", labels = scales::comma_format(accuracy = 1,  big.mark = " "))
         }
         
         p2
