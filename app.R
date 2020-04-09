@@ -115,8 +115,8 @@ body <- dashboardBody(
                 box(width = 3,
                     selectInput(
                      inputId = "worldCountry",
-                     label = "Wybierz kraj", choices = c("China", "United_States_of_America"),
-                     selected = c("China", "United_States_of_America"), multiple = TRUE
+                     label = "Wybierz kraj", choices = c("China", "Italy"),
+                     selected = c("China", "Italy"), multiple = TRUE
                     ),
                     selectInput(
                         inputId = "worldYVar",
@@ -278,28 +278,29 @@ server <- function(input, output, session) {
         if(length(input$worldCountry) > 0) {
             world.data.plot <- filter(world.data(), Country %in% input$worldCountry)
             
-            p1 <- ggplot(world.data.plot, aes_string(x = "Date", y = y, color = "Country")) +
-                geom_point() +
-                geom_line() +
+            p1 <- ggplot(world.data.plot, aes_string(x = "Date", y = y, colour = "Country")) +
+                geom_point(size = 1, alpha = 0.8) +
+                geom_line(alpha = 0.8) +
                 ggtitle(y.var) +
-                xlab(NULL)
+                xlab(NULL) +
+                scale_colour_discrete("Kraj")
         } else {
             p1 <- ggplot() + ggtitle(y.var)
         }
         
         if(input$worldLogScale) {
-            p2 <- p1 + scale_y_continuous(name = "", labels = scales::comma_format(accuracy = 1,  big.mark = " "), trans='log10')
+            p2 <- p1 + 
+                scale_y_continuous("", labels = scales::comma_format(accuracy = 1,  big.mark = " "), trans ='log10')
         } else {
-            p2 <- p1 + scale_y_continuous(name = "", labels = scales::comma_format(accuracy = 1,  big.mark = " "))
+            p2 <- p1 + 
+                scale_y_continuous("", labels = scales::comma_format(accuracy = 1,  big.mark = " "))
         }
-        
-        p2
     })
     
     observeEvent(world.data(), {
         choices <- unique(world.data()$Country)
         updateSelectInput(session, "worldCountry", choices = choices, 
-                          selected = c("China", "United_States_of_America")) 
+                          selected = c("China", "Italy")) 
     })
 
     # Today page --------------------------------------------------------------
