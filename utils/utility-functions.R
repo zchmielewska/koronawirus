@@ -16,6 +16,11 @@ loadLastFile <- function() {
   return(last.data)
 }
 
+
+loadData <- function() {
+  result <- read.csv("https://opendata.ecdc.europa.eu/covid19/casedistribution/csv", stringsAsFactors = FALSE)  
+}
+
 checkNewData <- function(data) {
   result <- data
   

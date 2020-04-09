@@ -10,9 +10,9 @@ library(DT)
 library(rdrop2)
 source("utils/utility-functions.R")
 
-# dropbox setup
-token <- readRDS("droptoken.rds")
-drop_acc(dtoken = token)
+# # dropbox setup
+# token <- readRDS("droptoken.rds")
+# drop_acc(dtoken = token)
 
 # Polish functions --------------------------------------------------------
 
@@ -172,11 +172,7 @@ body <- dashboardBody(
 server <- function(input, output, session) {
     
     # Prepare data ------------------------------------------------------------
-    
-    # output$test <- renderTable(
-    #     poland.data2()
-    # )
-    
+
     notify <- function(msg, id = NULL) {
         showNotification(msg, id = id, duration = NULL, closeButton = FALSE)
     }
@@ -184,10 +180,11 @@ server <- function(input, output, session) {
     ecdc.data <- reactive({
         id <- notify("Ładuję dane...")
         on.exit(removeNotification(id), add = TRUE)
-        data <- loadLastFile()
+        # data <- loadLastFile()
+        data <- loadData()
         
-        notify("Sprawdzam, czy są dostępne nowe dane...", id = id)
-        data <- checkNewData(data)
+        # notify("Sprawdzam, czy są dostępne nowe dane...", id = id)
+        # data <- checkNewData(data)
         
         notify("Wczytuję dane ECDC...", id = id)
         ecdc.data <- prepareECDCdata(data)
