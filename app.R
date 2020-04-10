@@ -92,11 +92,6 @@ body <- dashboardBody(
                         label = "Zmienna", choices = settings$y.vars$FullName,
                         selected = "Całkowita liczba zakażeń"
                     ),
-                    selectInput(
-                        inputId = "polandXVar",
-                        label = "Przebieg czasu", choices = settings$x.vars$FullName,
-                        selected = "Dzień epidemii"
-                    ),
                     checkboxInput("polandLogScale", "Skala logarytmiczna", value = FALSE),
                     hr(),
                     textOutput("datestamp")
@@ -244,22 +239,20 @@ server <- function(input, output, session) {
     })
     
     output$polandPlot <- plotly::renderPlotly({
-        x.var <- input$polandXVar # x.var <- "Dzień epidemii"
-        x     <- settings$x.vars %>% filter(FullName == x.var) %>% select(ColumnName) %>% pull()
         y.var <- input$polandYVar # y.var <- "Całkowita liczba zakażeń"
         y     <- settings$y.vars %>% filter(FullName == y.var) %>% select(ColumnName) %>% pull()
         
-        p1 <- ggplot(poland.data(), aes_string(x = x, y = y)) +
+        p1 <- ggplot(poland.data(), aes_string(x = "Date", y = y)) +
             geom_point() +
             geom_line() +
             theme(panel.grid.minor = element_blank()) +
             ggtitle(y.var) +
-            xlab(x.var)
+            xlab(NULL)
         
         if(input$polandLogScale) {
-            p2 <- p1 + scale_y_continuous(name = "", labels = scales::comma_format(accuracy = 1, big.mark = " "), trans='log10')
+            p2 <- p1 + scale_y_continuous("", labels = scales::comma_format(accuracy = 1, big.mark = " "), trans='log10')
         } else {
-            p2 <- p1 + scale_y_continuous(name = "", labels = scales::comma_format(accuracy = 1, big.mark = " "))
+            p2 <- p1 + scale_y_continuous("", labels = scales::comma_format(accuracy = 1, big.mark = " "))
         }
         
         p2
