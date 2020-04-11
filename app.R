@@ -1,20 +1,14 @@
 
 # Setup -------------------------------------------------------------------
 
-# packages and scripts
 library(shiny)
 library(ggplot2)
 library(dplyr)
 library(shinydashboard)
 library(DT)
-library(rdrop2)
+library(purrr)
+library(tidyr)
 source("utils/utility-functions.R")
-
-# # dropbox setup
-# token <- readRDS("droptoken.rds")
-# drop_acc(dtoken = token)
-
-# Polish functions --------------------------------------------------------
 
 # Functions with polish letters (crash otherwise)
 loadSettings <- function() {
@@ -36,10 +30,9 @@ loadSettings <- function() {
     return(settings)
 }
 settings <- loadSettings()
-getWorldDataTable <- function(world.data, ecdc.date) {
-    result <- world.data %>% 
+getWorldToday <- function(ecdc.data, ecdc.date) {
+    result <- ecdc.data %>% 
         filter(Date == ecdc.date) %>% 
-        filter(complete.cases(.)) %>% 
         arrange(desc(CasesTotal)) %>% 
         mutate(CasesInPop = CasesTotal/popData2018,
                Mortality  = DeathsTotal/CasesTotal) %>% 
@@ -65,18 +58,10 @@ sidebar <- dashboardSidebar(
 )
 
 body <- dashboardBody(
-    tags$head(
-        tags$link(rel = "stylesheet", type = "text/css", href = "custom.css")
-    ),
     tabItems(
-
         # Poland UI ---------------------------------------------------------------
-        
         tabItem(
             tabName = "poland",
-            fluidRow(
-                tableOutput("test")
-            ),
             fluidRow(
                 valueBoxOutput("epidemiaDayBox"),
                 valueBoxOutput("casesBox"),
@@ -100,7 +85,6 @@ body <- dashboardBody(
         ),
 
         # World UI ----------------------------------------------------------------
-        
         tabItem(
             tabName = "world",
             fluidRow(
@@ -117,6 +101,11 @@ body <- dashboardBody(
                         inputId = "worldYVar",
                         label = "Zmienna", choices = settings$y.vars$FullName,
                         selected = "Całkowita liczba zakażeń"
+                    ),
+                    selectInput(
+                        inputId = "worldXVar",
+                        label = "Przebieg czasu", choices = settings$x.vars$FullName,
+                        selected = "Dzień kalendarzowy"
                     ),
                     checkboxInput("worldLogScale", "Skala logarytmiczna", value = FALSE)
                 )
@@ -173,39 +162,25 @@ server <- function(input, output, session) {
     }
 
     ecdc.data <- reactive({
-        id <- notify("Ładuję dane...")
+        id <- notify("Wczytuję dane ECDC...")
         on.exit(removeNotification(id), add = TRUE)
-        # data <- loadLastFile()
         data <- loadData()
-        
-        # notify("Sprawdzam, czy są dostępne nowe dane...", id = id)
-        # data <- checkNewData(data)
-        
-        notify("Wczytuję dane ECDC...", id = id)
-        ecdc.data <- prepareECDCdata(data)
     })
     
     ecdc.date <- reactive(
-        ecdc.date <- ecdc.data() %>% select(Date) %>% arrange() %>% slice(1) %>% pull()    
+        ecdc.date <- ecdc.data() %>% select(Date) %>% pull() %>% max()
     )
     
     poland.data <- reactive({
         id <- notify("Przygotowuję dane dla Polski...")
         on.exit(removeNotification(id), add = TRUE)
-        getPolandData(ecdc.data())
-       
+        ecdc.data() %>% filter(Country == "Poland")
     }) 
     
-    world.data  <- reactive({
-        id <- notify("Przygotowuję dane dla Świata...")
-        on.exit(removeNotification(id), add = TRUE)
-        getWorldData(ecdc.data())
-    })
-    
     world.data.today <- reactive({
-        id <- notify("Przygotowuję dzisiejsze dane...")
+        id <- notify("Sprawdzam dzisiejsze dane...")
         on.exit(removeNotification(id), add = TRUE)
-        getWorldDataTable(world.data(), ecdc.date())
+        getWorldToday(ecdc.data(), ecdc.date())
     })
     
     # Poland page -------------------------------------------------------------
@@ -265,13 +240,15 @@ server <- function(input, output, session) {
     # World page --------------------------------------------------------------
 
     output$worldPlot <- plotly::renderPlotly({
+        x.var <- input$worldXVar # y.var <- "Dzień kalendarzowy"
+        x     <- settings$x.vars %>% filter(FullName == x.var) %>% select(ColumnName) %>% pull()
         y.var <- input$worldYVar # y.var <- "Całkowita liczba zakażeń"
         y     <- settings$y.vars %>% filter(FullName == y.var) %>% select(ColumnName) %>% pull()
         
         if(length(input$worldCountry) > 0) {
-            world.data.plot <- filter(world.data(), Country %in% input$worldCountry)
+            world.data.plot <- filter(ecdc.data(), Country %in% input$worldCountry)
             
-            p1 <- ggplot(world.data.plot, aes_string(x = "Date", y = y, colour = "Country")) +
+            p1 <- ggplot(world.data.plot, aes_string(x = x, y = y, colour = "Country")) +
                 geom_point(size = 1, alpha = 0.8) +
                 geom_line(alpha = 0.8) +
                 ggtitle(y.var) +
@@ -290,8 +267,8 @@ server <- function(input, output, session) {
         }
     })
     
-    observeEvent(world.data(), {
-        choices <- unique(world.data()$Country)
+    observeEvent(ecdc.data(), {
+        choices <- unique(ecdc.data()$Country)
         updateSelectInput(session, "worldCountry", choices = choices, 
                           selected = c("China", "Italy")) 
     })

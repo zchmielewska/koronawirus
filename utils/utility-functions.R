@@ -1,74 +1,59 @@
-aggregate <- function(v) {
-  result <- c()
-  for(i in 1:length(v)) {
-    if(i == 1) {
-      result[i] <- v[i] 
-    } else {
-      result[i] <- result[i-1] + v[i]
-    }
-  }
+nest_period <- function(min_date, max_date) {
+  result <- data.frame(Date = seq(min_date, max_date, by = "1 day")) %>% 
+    group_by(Date) %>%
+    nest(data = c(Date))
   return(result)
 }
 
 loadData <- function() {
-  result <- read.csv("https://opendata.ecdc.europa.eu/covid19/casedistribution/csv", stringsAsFactors = FALSE)  
-}
+  # Data from ECDC
+  raw.data <- read.csv("https://opendata.ecdc.europa.eu/covid19/casedistribution/csv", stringsAsFactors = FALSE)  
 
-prepareECDCdata <- function(data) {
-  result <- data %>% 
-    as_tibble() %>% 
-    mutate(Date = as.Date(paste(year, month, day, sep="-"))) %>% 
+  # Rename columns, change types, filter unncessary data and arrange
+  clean.data <- as_tibble(raw.data) %>% 
     rename(
       Country = `countriesAndTerritories`,
       CasesDelta = cases,
       DeathsDelta = deaths) %>% 
-    mutate(Date = as.Date(Date),
-           DeathsDelta = as.integer(DeathsDelta))
+    mutate(Date = as.Date(paste(year, month, day, sep="-")),
+           CasesDelta = as.numeric(CasesDelta),
+           DeathsDelta = as.numeric(DeathsDelta)) %>% 
+    select(c(Country, Date, CasesDelta, DeathsDelta, Date, popData2018)) %>% 
+    filter(complete.cases(.) & CasesDelta != 0) %>% 
+    arrange(Country, Date)
   
-  return(result)    
-}
-
-getPolandData <- function(data) {
-  
-  # filter and rename
-  result <- data %>% 
-    filter(Country == "Poland")  %>% 
-    select(-c(day, month, year, Country, popData2018, geoId)) %>% 
-    arrange(Date) %>% 
-    mutate(
-      CasesTotal  = aggregate(CasesDelta),
-      DeathsTotal = aggregate(DeathsDelta)
-    )
-  
-  # add missing days
-  date.min     <- min(result$Date)
-  date.max     <- max(result$Date)
-  date.period  <- seq(date.min, date.max, by = "1 day")
-  
-  for(i in 1:length(date.period)) {
-    d <- date.period[i]
-    n <- result %>% filter(Date == d) %>% nrow()
-    
-    # for no data, assume the same as previous day
-    if(n == 0) {
-      prev.data <- result %>% filter(Date == d-1) %>% select(-c(Date))
-      prev.day  <- cbind(data.frame(Date = d), prev.data)
-      result     <- rbind(result, prev.day)
-    }
-  }
-  
-  return(result)
-}
-
-getWorldData <- function(data) {
-  result <- data %>% 
-    select(Date, CasesDelta, DeathsDelta, Country, popData2018) %>% 
+  # Prepare df with full periods
+  periods <- clean.data %>% 
     group_by(Country) %>% 
-    arrange(Country, Date) %>% 
-    mutate(
-      CasesTotal = aggregate(CasesDelta),
-      DeathsTotal = aggregate(DeathsDelta),
+    summarize(
+      MinDate = min(Date),
+      MaxDate = max(Date)
     ) %>% 
-    ungroup()
-  return(result)
+    mutate(data = map2(MinDate, MaxDate, nest_period)) %>% 
+    select(-c(MinDate, MaxDate)) %>% 
+    unnest(data) %>% unnest(data)
+  
+  # Prepare population data
+  populations <- clean.data %>% 
+    select(Country, popData2018) %>% 
+    unique()
+  
+  # Join data to the full periods df
+  full.data <- periods %>% 
+    left_join(select(clean.data, -c(popData2018)), by = c("Country", "Date")) %>% 
+    replace_na(list(CasesDelta = 0, DeathsDelta = 0)) %>% 
+    left_join(populations, by = "Country") %>% 
+    group_by(Country) %>% 
+    mutate(CasesTotal = cumsum(CasesDelta),
+           DeathsTotal = cumsum(DeathsDelta))
+  
+  # Number of epidemia days
+  no.days <- full.data %>% tally() %>% select(n) %>% pull()
+  
+  # Final data
+  result <- full.data %>%
+    ungroup() %>%
+    mutate(EpidemiaDay = unlist(sapply(no.days, function(x) 1:x)))
+ 
+  return(result) 
 }
